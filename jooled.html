@@ -1,0 +1,285 @@
+<html>
+<head>
+  <title>Jooled</title>
+  
+  <script src="javascripts/prototype.s2.min.js" type="text/javascript"></script>
+
+<script type="text/javascript" charset="utf-8">
+
+Element.addMethods({
+  click: function(element) {
+    try {
+      element = $(element);
+      if (Jooled.last) {
+        var last = $(Jooled.last);
+        last.removeClassName('clicked');
+        element.swapColorsIfAdjacent(last);
+      }
+      element.addClassName('clicked');
+      Jooled.last = element;
+    } catch(err) {
+      alert(err);
+    }
+  },
+  
+  color: function(element) {
+    element = $(element);
+    var color;
+    if (element.hasClassName('red')) {
+      color = 'red';
+    }
+    if (element.hasClassName('yellow')) {
+      color = 'yellow';
+    }
+    if (element.hasClassName('blue')) {
+      color = 'blue';
+    }
+    return color;
+  },
+  
+  setColor: function(element, color) {
+    element = $(element);
+    element.removeClassName('red');
+    element.removeClassName('yellow');
+    element.removeClassName('blue');
+    element.addClassName(color);
+  },
+  
+  setColorRandom: function(element) {
+    var rand = Math.floor(Math.random()*10);
+    var color;
+    
+    if (rand <= 3) {
+      color = "red";
+    }
+    if (rand > 3 && rand <= 6) {
+      color = "yellow";
+    }
+    if (rand > 6) {
+      color = "blue";
+    }
+    element.setColor(color);
+  },
+  
+  swapColors: function(element, last) {
+    element = $(element);
+    last = $(last);
+    
+    var last_color = last.color();
+    var current_color = element.color();
+    
+    last.setColor(current_color);
+    element.setColor(last_color);    
+  },
+  
+  swapColorsIfAdjacent: function(element, last) {
+    if (element.adjacent(last)) {
+      element.swapColors(last);
+      
+      element.checkForRowMatch();
+      element.checkForColMatch();
+      last.checkForRowMatch();
+      last.checkForColMatch();
+    } 
+  },
+  
+  adjacent: function(element, last) {
+    element = $(element);
+    
+    row_distance = Math.abs(element.row() - last.row());
+    col_distance = Math.abs(element.column() - last.column());
+    
+    return (row_distance === 1 || col_distance === 1);
+  },
+  
+  row: function(element) {
+    element = $(element);
+    var id = element.identify();
+    var row;
+    
+    if (id.match(/r(\d)c(\d)/)) {
+      row = RegExp.$1;
+    }
+    return parseInt(row);
+  },
+  
+  column: function(element) {
+    element = $(element);
+    var id = element.identify();
+    var column;
+    
+    if (id.match(/r(\d)c(\d)/)) {
+      column = RegExp.$2;
+    }
+    return parseInt(column);
+  },
+  
+  checkForRowMatch: function(element) {
+    element = $(element);
+    var col = element.column();
+    
+    Jooled.allRows(col, Jooled.checkForMatches);
+    Jooled.matched = [];
+  },
+  
+  checkForColMatch: function(element) {
+    element = $(element);
+    var row = element.row();
+    
+    Jooled.allColumns(row, Jooled.checkForMatches);
+    Jooled.matched = [];
+  }
+});
+
+
+var Jooled = {
+  last: null,
+  rows: 3,
+  columns: 3,
+  
+  init: function() {
+    Jooled.addBehaviors();
+  },
+  
+  addBehaviors: function() {
+    $$('.jewel').each(function(element) {
+      element = $(element);
+      element.onclick = element.click;
+    });
+  },
+  
+  allRows: function(col, callback) {
+    for (i = 1; i <= Jooled.rows; i++) {
+      var jewel = Jewel.find(i, col);
+      callback(jewel);
+    }
+  },
+  
+  allColumns: function(row, callback) {
+    for (i = 1; i <= Jooled.columns; i++) {
+      var jewel = Jewel.find(row, i);
+      callback(jewel);
+    }
+  },
+  
+  allJewels: function(callback) {
+    for (c = 1; c <= Jooled.columns; c++) {
+      for (r = 1; r <= Jooled.rows; r++) {
+        var jewel = Jewel.find(r, c);
+        callback(jewel);
+      }
+    }
+  },
+  
+  checkForMatches: function(jewel) {
+    Jooled.matched = Jooled.matched || [];
+    if (Jooled.last_color === jewel.color()) {
+      Jooled.matched.push(jewel);
+    } else {
+      Jooled.matched = [jewel];
+      Jooled.last_color = jewel.color();
+    }
+    if (Jooled.matched.size() == 3) {
+      alert("match");
+      Jooled.matched.each(function(j) {
+        j.setColorRandom();
+      });
+    }
+  } 
+};
+
+
+var Jewel = {
+  find: function(row, column) {
+    var id = "r" + new String(row) + "c" + new String(column);
+    
+    return $(id);
+  }  
+};
+
+  
+document.observe("dom:loaded", Jooled.init);
+
+</script>
+
+<style type="text/css">  
+
+#main {
+  border: 3px solid green;
+  height: 310px;
+  width: 310px;
+}
+
+.jewel {
+  height: 100px;
+  cursor: pointer;
+  display: inline-block;
+  width: 100px;
+}
+
+.clicked {
+  border: 3px solid purple;
+  height: 94px;
+  width: 94px;
+}
+
+.red {
+  background-color: red;
+}
+.blue {
+  background-color: blue;
+}
+.yellow {
+  background-color: yellow;
+}
+.purple {
+  background-color: purple;
+}
+
+</style>
+
+
+</head>
+<body>
+
+<h1>Jooled</h1>
+
+
+<div id='main'>
+  
+  <div class="row">
+    
+    <div class='yellow jewel' id="r1c1">
+    </div>
+    <div class='blue jewel' id="r1c2">
+    </div>
+    <div class='yellow jewel' id="r1c3">
+    </div>
+  
+  </div>
+  <div class="row">
+    
+    <div class='red jewel' id="r2c1">
+    </div>
+    <div class='yellow jewel' id="r2c2">
+    </div>
+    <div class='blue jewel' id="r2c3">
+    </div>
+  
+  </div>
+  
+  <div class="row">
+    
+    <div class='red jewel' id="r3c1">
+    </div>
+    <div class='blue jewel' id="r3c2">
+    </div>
+    <div class='yellow jewel' id="r3c3">
+    </div>
+  
+  </div>  
+  
+</div>
+
+</body>
+</html>
