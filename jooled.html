@@ -1,22 +1,34 @@
 <html>
 <head>
-  <title>Jooled</title>
+  <title>Jewels</title>
   
-  <script src="javascripts/prototype.s2.min.js" type="text/javascript"></script>
-
+ <script src="javascripts/prototype.js" type="text/javascript"></script>
+ <script src="javascripts/scriptaculous.js" type="text/javascript"></script>
+ 
 <script type="text/javascript" charset="utf-8">
+
+function pixels(string) {
+  string.match(/(\d*)px/);
+  return parseInt(RegExp.$1);  
+}
 
 Element.addMethods({
   click: function(element) {
     try {
       element = $(element);
-      if (Jooled.last) {
-        var last = $(Jooled.last);
+      
+      if (Jewels.last) {
+        var last = $(Jewels.last);
         last.removeClassName('clicked');
+        last.setStyle(Jewel.style.default());
+        
         element.swapColorsIfAdjacent(last);
+        Jewels.last = null;
+      } else {        
+        element.addClassName('clicked');
+        element.setStyle(Jewel.style.clicked());
+        Jewels.last = element;
       }
-      element.addClassName('clicked');
-      Jooled.last = element;
     } catch(err) {
       alert(err);
     }
@@ -25,61 +37,55 @@ Element.addMethods({
   color: function(element) {
     element = $(element);
     var color;
-    if (element.hasClassName('red')) {
-      color = 'red';
-    }
-    if (element.hasClassName('yellow')) {
-      color = 'yellow';
-    }
-    if (element.hasClassName('blue')) {
-      color = 'blue';
-    }
+    Colors.colors.each(function(c) {
+      if (element.hasClassName(c)) {
+        color = c;
+      }
+    });
     return color;
   },
   
   setColor: function(element, color) {
     element = $(element);
-    element.removeClassName('red');
-    element.removeClassName('yellow');
-    element.removeClassName('blue');
+    Colors.colors.each(function(c) {
+      element.removeClassName(c);
+    });
     element.addClassName(color);
+    element.setStyle({
+      "background": color
+    })
   },
   
-  setColorRandom: function(element) {
-    var rand = Math.floor(Math.random()*10);
-    var color;
-    
-    if (rand <= 3) {
-      color = "red";
-    }
-    if (rand > 3 && rand <= 6) {
-      color = "yellow";
-    }
-    if (rand > 6) {
-      color = "blue";
-    }
+  setBlank: function(element) {
+    element = $(element);
+    element.setColor('blank');
+  },
+  
+  setColorRandom: function(element) {    
+    var color = Colors.generate();
     element.setColor(color);
+    Jewels.checkAllForMatches();
   },
   
   swapColors: function(element, last) {
     element = $(element);
     last = $(last);
     
-    var last_color = last.color();
     var current_color = element.color();
+    var last_color = last.color();
     
     last.setColor(current_color);
-    element.setColor(last_color);    
+    element.setColor(last_color); 
   },
   
   swapColorsIfAdjacent: function(element, last) {
     if (element.adjacent(last)) {
       element.swapColors(last);
-      
-      element.checkForRowMatch();
-      element.checkForColMatch();
-      last.checkForRowMatch();
-      last.checkForColMatch();
+      if (Jewels.checkAllForMatches()) {
+        // alert("there was a match");
+      } else {
+        last.swapColors(element);
+      }
     } 
   },
   
@@ -89,151 +95,437 @@ Element.addMethods({
     row_distance = Math.abs(element.row() - last.row());
     col_distance = Math.abs(element.column() - last.column());
     
-    return (row_distance === 1 || col_distance === 1);
+    var same_row = row_distance === 1;
+    var same_col = col_distance === 1;
+    
+    return (same_row ? !same_col : same_col);
   },
   
   row: function(element) {
     element = $(element);
-    var id = element.identify();
-    var row;
-    
-    if (id.match(/r(\d)c(\d)/)) {
-      row = RegExp.$1;
+    try {
+      var top = element.getStyle("top");
+      top = pixels(top);
+      var row = top / Jewel.height;
+    } catch(e) {
+      alert(e);
     }
-    return parseInt(row);
+    
+    return row+1;
   },
   
   column: function(element) {
     element = $(element);
-    var id = element.identify();
-    var column;
-    
-    if (id.match(/r(\d)c(\d)/)) {
-      column = RegExp.$2;
+    try {
+      var left = element.getStyle("left");
+      left = pixels(left);
+      var column = left / Jewel.width;
+    } catch(e) {
+      alert("column: " + e);
     }
-    return parseInt(column);
+    
+    return column+1;
   },
   
   checkForRowMatch: function(element) {
     element = $(element);
     var col = element.column();
     
-    Jooled.allRows(col, Jooled.checkForMatches);
-    Jooled.matched = [];
+    Jewels.allRows(col, Jewels.checkForMatches);
+    Jewels.matched = [];
   },
   
   checkForColMatch: function(element) {
     element = $(element);
     var row = element.row();
     
-    Jooled.allColumns(row, Jooled.checkForMatches);
-    Jooled.matched = [];
-  }
-});
-
-
-var Jooled = {
-  last: null,
-  rows: 3,
-  columns: 3,
-  
-  init: function() {
-    Jooled.addBehaviors();
+    Jewels.allColumns(row, function(jewel) {
+      Jewels.checkForMatches(jewel) 
+    });
+    Jewels.matched = [];
   },
   
-  addBehaviors: function() {
-    $$('.jewel').each(function(element) {
-      element = $(element);
-      element.onclick = element.click;
+  setTop: function(element, height) {
+    element = $(element);
+    element.setStyle({
+      "top": (height) + "px"      
     });
   },
   
-  allRows: function(col, callback) {
-    for (i = 1; i <= Jooled.rows; i++) {
-      var jewel = Jewel.find(i, col);
-      callback(jewel);
+  setLeft: function(element, height) {
+    element = $(element);
+    element.setStyle({
+      "left": (height) + "px"      
+    });
+  },
+  
+  setRow: function(element, row) {
+    element = $(element);
+
+    var start = 0;
+    var end = Jewel.height * (row-1);
+    
+    element.setTop(end);
+    element.clearRowClasses();
+    element.addClassName("r" + row);
+  },
+  
+  setColumn: function(element, col) {
+    element = $(element);
+    element.setLeft(Jewel.width * (col-1));
+    element.clearColumnClasses();
+    element.addClassName("c" + col);
+  },
+  
+  clearRowClasses: function(element) {
+    for (i=1; i <= Jewels.rows; i++) {
+      element.removeClassName("r" + i);
     }
   },
   
-  allColumns: function(row, callback) {
-    for (i = 1; i <= Jooled.columns; i++) {
-      var jewel = Jewel.find(row, i);
-      callback(jewel);
+  clearColumnClasses: function(element) {
+    for (i=1; i <= Jewels.columns; i++) {
+      element.removeClassName("c" + i);
+    }
+  }
+});
+
+var Score = {
+  score: 0,
+  
+  update: function() {
+    $('score').update(this.score);
+  },
+  
+  add: function(value) {
+    this.score = this.score + value;
+    this.update();
+  },
+};
+
+var Colors = {
+  colors: ["red", "blue", "yellow", "purple", "orange", "green"],
+  
+  count: {},
+  last: null,
+  last_count: 0,
+  
+  init: function() {
+    this.fresh = this.createFresh();
+    
+    this.colors.each(function(color) {
+      Colors.count[color] = 0;
+    });
+  },
+  
+  increment: function(color) {
+    this.count[color]++;
+  },
+  
+  decrement: function(color) {
+    this.count[color]--;
+  },
+    
+  createFresh: function() {
+    var fresh = [];
+    var last = 0;
+    while(fresh.size() < (Jewels.rows * Jewels.columns)) {
+      last = last + 1;
+      if (last === this.colors.size()) {
+        last = 0;
+      } 
+      fresh.push(this.colors[last]);
+    }
+    return fresh;
+  },
+  
+  generate: function() {
+    if (this.fresh.size() > 0) {
+      return this.generateFromFresh();
+    } else {
+      return this.random();
     }
   },
   
-  allJewels: function(callback) {
-    for (c = 1; c <= Jooled.columns; c++) {
-      for (r = 1; r <= Jooled.rows; r++) {
-        var jewel = Jewel.find(r, c);
-        callback(jewel);
+  generatePostFresh: function() {
+    var min, kolor, color;
+    
+    var counts = [];
+
+    for (i=0; i <= this.colors.size(); i++) {
+      kolor = Colors.colors[i];
+      counts.push(Colors.count[kolor]);
+    }
+    var index = counts.indexOf(counts.min());
+    kolor = Colors.colors[index];
+    
+    if (this.last == index) {
+      if (this.last_count < 2) {
+        this.last_count = this.last_count + 1;
+      } else {
+        this.last = null;
+        this.last_count = 0;
+        
+        kolor = Colors.random();
+      }
+    } else {
+      this.last = index;
+      this.last_count = 1;
+    }
+    return kolor;
+  },
+  
+  generateFromFresh: function() {
+    try {
+      var rand, color;
+    
+      var x = this.fresh.size() + 1;
+    
+      rand = Math.floor(Math.random() * x);
+    
+      color = this.fresh.splice(rand-1, 1);
+      return color;
+    } catch(err) {
+      alert(err);
+    }    
+  },
+  
+  random: function() {
+    try {
+      var rand, color;
+    
+      var count = this.colors.size();
+    
+      var x = count * 30;
+      x = x + 1;
+      rand = Math.floor(Math.random() * x) - 1;
+      if (rand < 0) {
+        rand = 0;
+      }
+      var rand2 = Math.floor(rand / 30);
+      
+      color = this.colors[rand2];
+      return color;
+    } catch(err) {
+      alert(err);
+    }    
+  },
+
+  each: function(callback) {
+    this.colors.each(function(color) {
+      callback(color);
+    });
+  }
+};
+
+var Jewels = {
+  last: null,
+  rows: 8,
+  columns: 8,
+  
+  init: function() {
+    try {
+      Colors.init();
+      Jewels.create();
+      Score.update();
+      Jewels.checkAllForMatches();
+      // alert(Object.toJSON(Colors.count));
+    } catch(z) {
+      alert(z);
+    }
+  },
+  
+  create: function() {
+    var width = Jewels.columns * Jewel.width;
+    var height = Jewels.rows * Jewel.height;
+    
+    width_str = new String(width) + "px";
+    height_str = new String(height) + "px";
+    
+    $('main').setStyle({
+      "width": width_str,
+      "height": height_str
+    });
+    $('header').setStyle({
+      "height": (height - 20 + 4) + "px"
+    });
+    
+    this.each(function(c, r) {
+      var color = Colors.generate();
+
+      jewel = Jewel.new(c, r, color);
+      $('main').insert(jewel);
+    });
+  },
+  
+  each: function(callback) {
+    for (r = 1; r <= Jewels.rows; r++) {
+      for (c = 1; c <= Jewels.columns; c++) {
+        callback(c, r);
       }
     }
   },
   
+  settle: function() {
+    this.each(function(c, r) {
+      jewel = Jewel.find(c, r);
+      if (jewel) {
+        
+      } else {
+        Jewel.drop(c, r);
+      }
+    });
+  },
+  
+  allRows: function(col, callback) {
+    var result = false;
+    for (i = 1; i <= Jewels.rows; i++) {
+      var jewel = Jewel.find(col, i);
+      result = result || callback(jewel);
+    }
+    return result;
+  },
+  
+  allColumns: function(row, callback) {
+    var result = false;
+    for (i = 1; i <= Jewels.columns; i++) {
+      var jewel = Jewel.find(i, row);
+      result = result || callback(jewel);
+    }
+    return result;
+  },
+  
+  checkAllForMatches: function() {
+    var result = false;
+    for(c = 1; c <= Jewels.columns; c++) {
+      result = result || Jewels.allRows(c, Jewels.checkForMatches);
+      Jewels.matched = [];
+    }
+    for(r = 1; r <= Jewels.rows; r++) {
+      result = result || Jewels.allColumns(r, Jewels.checkForMatches);
+      Jewels.matched = [];
+    }
+    return result;
+  },
+  
   checkForMatches: function(jewel) {
-    Jooled.matched = Jooled.matched || [];
-    if (Jooled.last_color === jewel.color()) {
-      Jooled.matched.push(jewel);
+    var result = false;
+    Jewels.matched = Jewels.matched || [];
+    if (Jewels.last_color === jewel.color()) {
+      Jewels.matched.push(jewel);
     } else {
-      Jooled.matched = [jewel];
-      Jooled.last_color = jewel.color();
+      Jewels.matched = [jewel];
+      Jewels.last_color = jewel.color();
     }
-    if (Jooled.matched.size() == 3) {
-      alert("match");
-      Jooled.matched.each(function(j) {
-        j.setColorRandom();
+    if (Jewels.matched.size() == 3) {
+      result = true;
+      // alert("match");
+      Jewels.matched.each(function(j) {
+        Score.add(10);
+        Colors.decrement(j.color());
+        j.remove();
       });
+      Jewels.settle();
+      Jewels.checkAllForMatches();
+    } else {
     }
-  } 
+    return result;
+  }
 };
 
-
 var Jewel = {
-  find: function(row, column) {
-    var id = "r" + new String(row) + "c" + new String(column);
+  height: 50,
+  width: 50,
+  
+  new: function(column, row, color) {
+    color = color || Colors.generate();
+    var jewel = new Element('div', {
+      "class": color + " jewel"
+    });
+    jewel.setStyle(Jewel.style.default());
+    jewel.setStyle({
+      "background": color
+    });
     
-    return $(id);
-  }  
+    Colors.increment(color);
+    
+    jewel.setColumn(column);
+    jewel.setRow(row);
+    jewel.onclick = jewel.click;
+    
+    return jewel;
+  },
+  
+  find: function(column, row) {
+    return $$('.c' + column + '.r' + row).first();
+  },
+  
+  drop: function(column, row) {
+    if (row > 1) {
+      for(z=row-1; z > 0; z--) {
+        above = Jewel.find(column, z);
+        above.setRow(z+1);
+      }
+    }
+    var jewel = Jewel.new(column, 1);
+    $('main').insert(jewel);    
+  },
+  
+  style: {
+    default: function() {
+      return {
+        "height": new String(Jewel.height-2) + "px",
+        "width": new String(Jewel.width-2) + "px"
+      };
+    },
+    
+    clicked: function() {
+      return {
+        "height": new String(Jewel.height-6) + "px",
+        "width": new String(Jewel.width-6) + "px"
+      };
+    }
+  }
 };
 
   
-document.observe("dom:loaded", Jooled.init);
+document.observe("dom:loaded", Jewels.init);
 
 </script>
 
 <style type="text/css">  
 
 #main {
-  border: 3px solid green;
-  height: 310px;
-  width: 310px;
+  border: 3px solid black;
+  position: absolute;
+  top: 10px;
+  left: 200px;
+}
+
+#header {
+  background-color: #aaa;
+  border: 1px solid #ccc;
+  padding: 10px;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 150px;
 }
 
 .jewel {
-  height: 100px;
+  border: 1px solid white;
   cursor: pointer;
   display: inline-block;
-  width: 100px;
+  position: absolute;
 }
 
 .clicked {
-  border: 3px solid purple;
-  height: 94px;
-  width: 94px;
+  border: 3px solid magenta;
 }
 
-.red {
-  background-color: red;
-}
-.blue {
-  background-color: blue;
-}
-.yellow {
-  background-color: yellow;
-}
-.purple {
-  background-color: purple;
+.column {
+  position: absolute;
+  top: 0;
 }
 
 </style>
@@ -242,42 +534,17 @@ document.observe("dom:loaded", Jooled.init);
 </head>
 <body>
 
+<div id="header">
 <h1>Jooled</h1>
+
+<p>Score: <span id="score"></span></p>
+<p id='thingy'><a href="javascript:void(0);" onclick="alert(Object.toJSON(Colors.count)); return false;">Count colors</a></p>
+</div>
+
 
 
 <div id='main'>
-  
-  <div class="row">
-    
-    <div class='yellow jewel' id="r1c1">
-    </div>
-    <div class='blue jewel' id="r1c2">
-    </div>
-    <div class='yellow jewel' id="r1c3">
-    </div>
-  
-  </div>
-  <div class="row">
-    
-    <div class='red jewel' id="r2c1">
-    </div>
-    <div class='yellow jewel' id="r2c2">
-    </div>
-    <div class='blue jewel' id="r2c3">
-    </div>
-  
-  </div>
-  
-  <div class="row">
-    
-    <div class='red jewel' id="r3c1">
-    </div>
-    <div class='blue jewel' id="r3c2">
-    </div>
-    <div class='yellow jewel' id="r3c3">
-    </div>
-  
-  </div>  
+</div>  
   
 </div>
 
