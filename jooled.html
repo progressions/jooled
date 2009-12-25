@@ -320,8 +320,8 @@ var Colors = {
 
 var Jewels = {
   last: null,
-  rows: 8,
-  columns: 8,
+  rows: 3,
+  columns: 3,
   
   init: function() {
     try {
@@ -430,6 +430,24 @@ var Jewels = {
     } else {
     }
     return result;
+  },
+  
+  matrix: function() {
+    try {
+      var row = [];
+      var column = [];
+      var matrix = [];
+      for (r = 1; r <= Jewels.rows; r++) {
+        row = [];
+        for (c = 1; c <= Jewels.columns; c++) {
+          row.push(Jewel.find(c,r).color());
+        }
+        matrix.push(row);
+      }
+      return matrix;
+    } catch(err) {
+      alert(err);
+    }
   }
 };
 
@@ -539,6 +557,7 @@ document.observe("dom:loaded", Jewels.init);
 
 <p>Score: <span id="score"></span></p>
 <p id='thingy'><a href="javascript:void(0);" onclick="alert(Object.toJSON(Colors.count)); return false;">Count colors</a></p>
+<p><a href="#" onclick="alert(Object.toJSON(Jewels.matrix())); return false;">Matrix</a></p>
 </div>
 
 
