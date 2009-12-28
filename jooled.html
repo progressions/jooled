@@ -7,26 +7,456 @@
  
 <script type="text/javascript" charset="utf-8">
 
+function pause(mills) {
+  var date = new Date();
+  var curDate = null;
+  
+  do {
+    curDate = new Date();
+  } while(curDate - date < mills);
+};
+
 function pixels(string) {
   string.match(/(\d*)px/);
   return parseInt(RegExp.$1);  
-}
+};
+
+var Remove = {
+  all: function(color) {
+    $$('.jewel').each(function(j) {
+      if (j.color() == color) {
+        j.remove();
+      }
+    });
+    Jewels.settle();
+  }
+};
+
+var Explode = {
+  single: function(element) {
+    element = $(element);
+    var row = element.row();
+    var column = element.column();
+    
+    var elements = [];
+    
+    for (x=-1; x <= 1; x++) {
+      for (y=-1; y <= 1; y++) {
+        var jewel = Jewel.find(column+x, row+y);
+        if (jewel) {
+          jewel.remove();
+        }
+      }
+    }
+    setTimeout("Jewels.settle();", 300);
+  }
+};
+
+var Pattern = {
+  hint: function() {
+    this.all(true);
+  },
+  
+  all: function(highlight) {
+    Pattern.highlight_on = highlight;
+    
+    var result = false;
+    $$('.jewel').each(function(jewel) {
+      result = result || Pattern.l(jewel) || Pattern.v(jewel) || Pattern.i(jewel);
+    });
+    if (!result) {
+      alert("No moves!");
+    }
+    Pattern.highlight_on = false;
+    return result;
+  },
+  
+  match: function() {
+    return Pattern.Match.all();
+  },
+  
+  check: function(element, pattern) {
+    return pattern.up(element) || pattern.down(element) || pattern.left(element) || pattern.right(element);
+  },
+  
+  l: function(element) {
+    return Pattern.check(element, Pattern.L);
+  },
+  
+  v: function(element) {
+    return Pattern.check(element, Pattern.V);
+  },
+  
+  i: function(element) {
+    return Pattern.check(element, Pattern.I);
+  },
+  
+  five: function(element) {
+    // return Pattern.check(element, Pattern.Match);
+    var elements = [];
+    elements.push(Pattern.Match.up(element));
+    elements.push(Pattern.Match.down(element));
+    elements.push(Pattern.Match.left(element));
+    elements.push(Pattern.Match.right(element));
+    elements.flatten();
+    return elements;
+  },
+  
+  solve: function(element, direction) {
+    return true;
+    element.move(direction);
+    // alert("Solving pattern at " + element.column() + ", " + element.row());
+    Jewels.checkAllForMatches();
+    Pattern.all();
+  },
+  
+  highlight_on: false,
+  
+  highlight: function(elements) {    
+    if (Pattern.highlight_on) {
+      elements.first().setClicked();
+    }
+  },
+  
+  L: {
+    all: function() {
+      var result = false;
+      $$('.jewel').each(function(jewel) {
+        result = result || Pattern.l(jewel);
+      });
+      return result;
+    },
+  
+    up: function(element) {
+      return this.pattern(element, "up", "left") || this.pattern(element, "up", "right");
+    },
+  
+    down: function(element) {
+      return this.pattern(element, "down", "left") || this.pattern(element, "down", "right");
+    },
+  
+    left: function(element) {
+      return this.pattern(element, "left", "up") || this.pattern(element, "left", "down");
+    },
+  
+    right: function(element) {
+      return this.pattern(element, "right", "up") || this.pattern(element, "right", "down");
+    },
+  
+    pattern: function(element, pointing, side) {
+      var x_direction, y_direction;
+    
+      if (pointing == "up" || side == "up") {
+        y_direction = -1;
+      }
+      if (pointing == "down" || side == "down") {
+        y_direction = 1;
+      }
+      if (pointing == "left" || side == "left") {
+        x_direction = -1;
+      }
+      if (pointing == "right" || side == "right") {
+        x_direction = 1;
+      }
+    
+      element = $(element);
+    
+      var color = element.color();
+      var col = element.column();
+      var row = element.row();
+    
+      var result = false;
+    
+      var x,y;
+      x = col + (x_direction);
+      y = row + (y_direction);
+      first = Jewel.find(x,y);
+      if (first && first.color() == color) {
+        if (pointing == "up" || pointing == "down") {
+          y = row + (2 * y_direction);
+        }
+        if (pointing == "left" || pointing == "right") {
+          x = col + (2 * x_direction);
+        }
+        second = Jewel.find(x,y);
+        result = result || second && second.color() == color;
+        if (result) {
+          Pattern.highlight([element, first, second]);
+          Pattern.solve(element, side);
+          return result;
+        }  
+      }    
+    }
+  },
+  
+  V: {
+    all: function() {
+      var result = false;
+      $$('.jewel').each(function(jewel) {
+        result = result || Pattern.v(jewel)
+      });
+      return result;
+    },
+  
+    up: function(element) {
+      return this.pattern(element, "up");
+    },
+  
+    down: function(element) {
+      return this.pattern(element, "down");
+    },
+  
+    left: function(element) {
+      return this.pattern(element, "left");
+    },
+  
+    right: function(element) {
+      return this.pattern(element, "right");
+    },
+  
+    pattern: function(element, pointing) {
+      var x_direction = -1;
+      var y_direction = -1;
+    
+      if (pointing == "up") {
+        y_direction = -1;
+      }
+      if (pointing == "down") {
+        y_direction = 1;
+      }
+      if (pointing == "left") {
+        x_direction = -1;
+      }
+      if (pointing == "right") {
+        x_direction = 1;
+      }
+          
+      element = $(element);
+    
+      var color = element.color();
+      var col = element.column();
+      var row = element.row();
+    
+      var result = false;
+    
+      var x,y;
+      x = col + (x_direction);
+      y = row + (y_direction);
+      first = Jewel.find(x,y);
+      if (first && first.color() == color) {
+        if (pointing == "up" || pointing == "down") {
+          x = col - (x_direction);
+          y = row + (y_direction);
+        }
+        if (pointing == "left" || pointing == "right") {
+          x = col + (x_direction);
+          y = row - (y_direction);
+        }
+        second = Jewel.find(x,y);
+        result = result || second && second.color() == color;
+        if (result) {
+          Pattern.highlight([element, first, second]);
+          Pattern.solve(element, pointing);
+          return result;
+        }  
+      }    
+    }
+  },
+  
+  I: {
+    all: function() {
+      var result = false;
+      $$('.jewel').each(function(jewel) {
+        result = result || Pattern.i(jewel);
+      });
+      return result;
+    },
+  
+    up: function(element) {
+      return this.pattern(element, "up");
+    },
+  
+    down: function(element) {
+      return this.pattern(element, "down");
+    },
+  
+    left: function(element) {
+      return this.pattern(element, "left");
+    },
+  
+    right: function(element) {
+      return this.pattern(element, "right");
+    },
+  
+    pattern: function(element, pointing) {
+      var x_direction = 0;
+      var y_direction = 0;
+    
+      if (pointing == "up") {
+        y_direction = -1;
+      }
+      if (pointing == "down") {
+        y_direction = 1;
+      }
+      if (pointing == "left") {
+        x_direction = -1;
+      }
+      if (pointing == "right") {
+        x_direction = 1;
+      }
+      
+      element = $(element);
+    
+      var color = element.color();
+      var col = element.column();
+      var row = element.row();
+    
+      var result = false;
+    
+      var x,y;
+      x = col + (2 * x_direction);
+      y = row + (2 * y_direction);
+      first = Jewel.find(x,y);
+      if (first && first.color() == color) {
+        if (pointing == "up" || pointing == "down") {
+          y = row + (3 * y_direction);
+        }
+        if (pointing == "left" || pointing == "right") {
+          x = col + (3 * x_direction);
+        }
+        second = Jewel.find(x,y);
+        result = result || second && second.color() == color;
+        if (result) {
+          Pattern.highlight([element, first, second]);
+          Pattern.solve(element, pointing);
+          return result;
+        }  
+      }    
+    }
+  },
+  
+  Match: {
+    all: function() {
+      var elements = [];
+      $$('.jewel').each(function(jewel) {
+        var result = Pattern.five(jewel);
+        elements.push(result);
+      });
+      elements = elements.flatten();
+      elements = elements.uniq();
+      // alert("elements are: " + elements.inspect());
+      return elements;
+    },
+  
+    up: function(element) {
+      return this.pattern(element, "up");
+    },
+  
+    down: function(element) {
+      return this.pattern(element, "down");
+    },
+  
+    left: function(element) {
+      return this.pattern(element, "left");
+    },
+  
+    right: function(element) {
+      return this.pattern(element, "right");
+    },
+  
+    pattern: function(element, pointing) {
+      var x_direction = 0;
+      var y_direction = 0;
+    
+      if (pointing == "up") {
+        y_direction = -1;
+      }
+      if (pointing == "down") {
+        y_direction = 1;
+      }
+      if (pointing == "left") {
+        x_direction = -1;
+      }
+      if (pointing == "right") {
+        x_direction = 1;
+      }
+      
+      element = $(element);
+      
+      var elements = [];
+    
+      var color = element.color();
+      var col = element.column();
+      var row = element.row();
+    
+      var x,y;
+      x = col + (1 * x_direction);
+      y = row + (1 * y_direction);
+      
+      var first = Jewel.find(x,y);
+      
+      // two in a row
+      if (first && first.color() == color) {
+        if (pointing == "up" || pointing == "down") {
+          y = row + (2 * y_direction);
+        }
+        if (pointing == "left" || pointing == "right") {
+          x = col + (2 * x_direction);
+        }
+        var second = Jewel.find(x,y);
+      
+        // three in a row
+        if (second && second.color() == color) {
+          elements.push(element);
+          elements.push(first);
+          elements.push(second);
+          
+          if (pointing == "up" || pointing == "down") {
+            y = row + (3 * y_direction);
+          }
+          if (pointing == "left" || pointing == "right") {
+            x = col + (3 * x_direction);
+          }
+          var third = Jewel.find(x,y);
+          
+          // four in a row
+          if (third && third.color() == color) {
+            elements.push(third);
+            
+            if (pointing == "up" || pointing == "down") {
+              y = row + (4 * y_direction);
+            }
+            if (pointing == "left" || pointing == "right") {
+              x = col + (4 * x_direction);
+            }
+            var fourth = Jewel.find(x,y);
+
+            // five in a row
+            if (fourth && fourth.color() == color) {
+              elements.push(fourth);
+            }
+          }
+        }
+      }
+      return elements;
+    }
+  }
+};
 
 Element.addMethods({
   click: function(element) {
     try {
-      element = $(element);
+      $$('.jewel').each(function(j) {
+        j.removeClassName('clicked');
+        j.setStyle(Jewel.style.default());
+      });
       
       if (Jewels.last) {
         var last = $(Jewels.last);
-        last.removeClassName('clicked');
-        last.setStyle(Jewel.style.default());
-        
-        element.swapColorsIfAdjacent(last);
+        element.swapIfAdjacent(last);
         Jewels.last = null;
       } else {        
-        element.addClassName('clicked');
-        element.setStyle(Jewel.style.clicked());
+        element.setClicked();
         Jewels.last = element;
       }
     } catch(err) {
@@ -34,31 +464,25 @@ Element.addMethods({
     }
   },
   
+  explode: Explode.single,
+  
   color: function(element) {
     element = $(element);
     var color;
-    Colors.colors.each(function(c) {
-      if (element.hasClassName(c)) {
-        color = c;
-      }
-    });
+    color = element.getStyle("background-color");
     return color;
+  },
+  
+  setClicked: function(element) {
+    element = $(element);
+    element.addClassName("clicked").setStyle(Jewel.style.clicked());
   },
   
   setColor: function(element, color) {
     element = $(element);
-    Colors.colors.each(function(c) {
-      element.removeClassName(c);
-    });
-    element.addClassName(color);
     element.setStyle({
       "background": color
     })
-  },
-  
-  setBlank: function(element) {
-    element = $(element);
-    element.setColor('blank');
   },
   
   setColorRandom: function(element) {    
@@ -67,7 +491,28 @@ Element.addMethods({
     Jewels.checkAllForMatches();
   },
   
-  swapColors: function(element, last) {
+  move: function(element, direction) {
+    element = $(element);
+    var column = element.column();
+    var row = element.row();
+    
+    if (direction == "up") {
+      row--;
+    }
+    if (direction == "down") {
+      row++;
+    }
+    if (direction == "left") {
+      column--;
+    }
+    if (direction == "right") {
+      column++;
+    }
+    var next = Jewel.find(column, row);
+    element.swap(next);
+  },
+  
+  swap: function(element, last) {
     element = $(element);
     last = $(last);
     
@@ -78,13 +523,12 @@ Element.addMethods({
     element.setColor(last_color); 
   },
   
-  swapColorsIfAdjacent: function(element, last) {
+  swapIfAdjacent: function(element, last) {
     if (element.adjacent(last)) {
-      element.swapColors(last);
-      if (Jewels.checkAllForMatches()) {
-        // alert("there was a match");
+      element.swap(last);
+      if (Jewels.checkAllForMatches().any()) {
       } else {
-        last.swapColors(element);
+        last.swap(element);
       }
     } 
   },
@@ -99,6 +543,14 @@ Element.addMethods({
     var same_col = col_distance === 1;
     
     return (same_row ? !same_col : same_col);
+  },
+  
+  pattern_l: function(element) {
+    element = $(element);
+    
+    return Pattern.l(element);
+    
+    return result;
   },
   
   row: function(element) {
@@ -125,24 +577,6 @@ Element.addMethods({
     }
     
     return column+1;
-  },
-  
-  checkForRowMatch: function(element) {
-    element = $(element);
-    var col = element.column();
-    
-    Jewels.allRows(col, Jewels.checkForMatches);
-    Jewels.matched = [];
-  },
-  
-  checkForColMatch: function(element) {
-    element = $(element);
-    var row = element.row();
-    
-    Jewels.allColumns(row, function(jewel) {
-      Jewels.checkForMatches(jewel) 
-    });
-    Jewels.matched = [];
   },
   
   setTop: function(element, height) {
@@ -320,16 +754,16 @@ var Colors = {
 
 var Jewels = {
   last: null,
-  rows: 3,
-  columns: 3,
+  rows: 8,
+  columns: 8,
   
   init: function() {
     try {
       Colors.init();
       Jewels.create();
       Score.update();
+      
       Jewels.checkAllForMatches();
-      // alert(Object.toJSON(Colors.count));
     } catch(z) {
       alert(z);
     }
@@ -375,6 +809,7 @@ var Jewels = {
         Jewel.drop(c, r);
       }
     });
+    this.checkAllForMatches();
   },
   
   allRows: function(col, callback) {
@@ -397,57 +832,21 @@ var Jewels = {
   
   checkAllForMatches: function() {
     var result = false;
-    for(c = 1; c <= Jewels.columns; c++) {
-      result = result || Jewels.allRows(c, Jewels.checkForMatches);
-      Jewels.matched = [];
-    }
-    for(r = 1; r <= Jewels.rows; r++) {
-      result = result || Jewels.allColumns(r, Jewels.checkForMatches);
-      Jewels.matched = [];
-    }
-    return result;
-  },
-  
-  checkForMatches: function(jewel) {
-    var result = false;
-    Jewels.matched = Jewels.matched || [];
-    if (Jewels.last_color === jewel.color()) {
-      Jewels.matched.push(jewel);
-    } else {
-      Jewels.matched = [jewel];
-      Jewels.last_color = jewel.color();
-    }
-    if (Jewels.matched.size() == 3) {
-      result = true;
-      // alert("match");
-      Jewels.matched.each(function(j) {
+    
+    result = Pattern.match();
+    // alert(result.inspect());
+
+    if (result.any()) {
+      result.each(function(j) {
         Score.add(10);
         Colors.decrement(j.color());
         j.remove();
       });
-      Jewels.settle();
-      Jewels.checkAllForMatches();
-    } else {
+      setTimeout("Jewels.settle();", 500);
     }
+    
+    // Pattern.all();
     return result;
-  },
-  
-  matrix: function() {
-    try {
-      var row = [];
-      var column = [];
-      var matrix = [];
-      for (r = 1; r <= Jewels.rows; r++) {
-        row = [];
-        for (c = 1; c <= Jewels.columns; c++) {
-          row.push(Jewel.find(c,r).color());
-        }
-        matrix.push(row);
-      }
-      return matrix;
-    } catch(err) {
-      alert(err);
-    }
   }
 };
 
@@ -458,7 +857,7 @@ var Jewel = {
   new: function(column, row, color) {
     color = color || Colors.generate();
     var jewel = new Element('div', {
-      "class": color + " jewel"
+      "class": "jewel"
     });
     jewel.setStyle(Jewel.style.default());
     jewel.setStyle({
@@ -486,7 +885,8 @@ var Jewel = {
       }
     }
     var jewel = Jewel.new(column, 1);
-    $('main').insert(jewel);    
+    $('main').insert(jewel);
+    // jewel.highlight();
   },
   
   style: {
@@ -541,11 +941,6 @@ document.observe("dom:loaded", Jewels.init);
   border: 3px solid magenta;
 }
 
-.column {
-  position: absolute;
-  top: 0;
-}
-
 </style>
 
 
@@ -556,8 +951,16 @@ document.observe("dom:loaded", Jewels.init);
 <h1>Jooled</h1>
 
 <p>Score: <span id="score"></span></p>
-<p id='thingy'><a href="javascript:void(0);" onclick="alert(Object.toJSON(Colors.count)); return false;">Count colors</a></p>
-<p><a href="#" onclick="alert(Object.toJSON(Jewels.matrix())); return false;">Matrix</a></p>
+<!-- <p id='thingy'><a href="javascript:void(0);" onclick="alert(Object.toJSON(Colors.count)); return false;">Count colors</a></p> -->
+<p><a href="#" onclick="Pattern.hint(); return false;">Hint</a></p>
+  <div style="display:none;">
+    <p><a href="#" onclick="Remove.all('red'); return false;">Remove all red</a></p>
+    <p><a href="#" onclick="Remove.all('blue'); return false;">Remove all blue</a></p>
+    <p><a href="#" onclick="Remove.all('green'); return false;">Remove all green</a></p>
+    <p><a href="#" onclick="Remove.all('purple'); return false;">Remove all purple</a></p>
+    <p><a href="#" onclick="Remove.all('yellow'); return false;">Remove all yellow</a></p>
+    <p><a href="#" onclick="Remove.all('orange'); return false;">Remove all orange</a></p>
+  </div>
 </div>
 
 
