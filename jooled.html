@@ -114,6 +114,7 @@ var Pattern = {
   
   highlight: function(elements) {    
     if (Pattern.highlight_on) {
+      elements.first().highlight();
       elements.first().setClicked();
     }
   },
@@ -474,6 +475,10 @@ Element.addMethods({
   },
   
   setClicked: function(element) {
+    $$('.clicked').each(function(e) {
+      e.removeClassName("clicked").setStyle(Jewel.style.default());
+      Jewels.last = null;
+    });
     element = $(element);
     element.addClassName("clicked").setStyle(Jewel.style.clicked());
   },
