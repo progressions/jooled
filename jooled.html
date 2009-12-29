@@ -673,6 +673,16 @@ var Jewel = {
     return $$('.c' + column + '.r' + row).first();
   },
   
+  findByColor: function(color) {
+    var elements = [];
+    $$('.jewel').each(function(j) {
+      if (j.color() == color) {
+        elements.push(j);
+      }
+    });
+    return elements;
+  },
+  
   drop: function(column, row) {
     if (row > 1) {
       for(z=row-1; z > 0; z--) {
