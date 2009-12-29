@@ -651,13 +651,10 @@ var Jewels = {
   },
   
   checkAllForMatches: function() {
-    var result = false;
-    
-    result = Pattern.match();
-    // alert(result.inspect());
+    var results = Pattern.match();
 
-    if (result.any()) {
-      result.each(function(j) {
+    if (results.any()) {
+      results.each(function(j) {
         Score.add(10);
         Colors.decrement(j.color());
         j.remove();
@@ -665,8 +662,8 @@ var Jewels = {
       setTimeout("Jewels.settle();", 500);
     }
     
-    // Pattern.all();
-    return result;
+    Pattern.all();
+    return results;
   }
 };
 
