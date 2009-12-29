@@ -48,7 +48,7 @@ var Explode = {
         }
       }
     }
-    setTimeout("Jewels.settle();", 300);
+    setTimeout("Jewels.settle();", 500);
   }
 };
 
@@ -92,7 +92,6 @@ var Pattern = {
   },
   
   five: function(element) {
-    // return Pattern.check(element, Pattern.Match);
     var elements = [];
     elements.push(Pattern.Match.up(element));
     elements.push(Pattern.Match.down(element));
@@ -501,33 +500,33 @@ var Colors = {
     }
   },
   
-  generatePostFresh: function() {
-    var min, kolor, color;
-    
-    var counts = [];
-
-    for (i=0; i <= this.colors.size(); i++) {
-      kolor = Colors.colors[i];
-      counts.push(Colors.count[kolor]);
-    }
-    var index = counts.indexOf(counts.min());
-    kolor = Colors.colors[index];
-    
-    if (this.last == index) {
-      if (this.last_count < 2) {
-        this.last_count = this.last_count + 1;
-      } else {
-        this.last = null;
-        this.last_count = 0;
-        
-        kolor = Colors.random();
-      }
-    } else {
-      this.last = index;
-      this.last_count = 1;
-    }
-    return kolor;
-  },
+  // generatePostFresh: function() {
+  //   var min, kolor, color;
+  //   
+  //   var counts = [];
+  // 
+  //   for (i=0; i <= this.colors.size(); i++) {
+  //     kolor = Colors.colors[i];
+  //     counts.push(Colors.count[kolor]);
+  //   }
+  //   var index = counts.indexOf(counts.min());
+  //   kolor = Colors.colors[index];
+  //   
+  //   if (this.last == index) {
+  //     if (this.last_count < 2) {
+  //       this.last_count = this.last_count + 1;
+  //     } else {
+  //       this.last = null;
+  //       this.last_count = 0;
+  //       
+  //       kolor = Colors.random();
+  //     }
+  //   } else {
+  //     this.last = index;
+  //     this.last_count = 1;
+  //   }
+  //   return kolor;
+  // },
   
   generateFromFresh: function() {
     try {
@@ -623,31 +622,11 @@ var Jewels = {
   settle: function() {
     this.each(function(c, r) {
       jewel = Jewel.find(c, r);
-      if (jewel) {
-        
-      } else {
+      if (!jewel) {
         Jewel.drop(c, r);
       }
     });
     this.checkAllForMatches();
-  },
-  
-  allRows: function(col, callback) {
-    var result = false;
-    for (i = 1; i <= Jewels.rows; i++) {
-      var jewel = Jewel.find(col, i);
-      result = result || callback(jewel);
-    }
-    return result;
-  },
-  
-  allColumns: function(row, callback) {
-    var result = false;
-    for (i = 1; i <= Jewels.columns; i++) {
-      var jewel = Jewel.find(i, row);
-      result = result || callback(jewel);
-    }
-    return result;
   },
   
   checkAllForMatches: function() {
