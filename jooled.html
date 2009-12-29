@@ -444,191 +444,6 @@ var Pattern = {
   }
 };
 
-Element.addMethods({
-  click: function(element) {
-    try {
-      $$('.jewel').each(function(j) {
-        j.removeClassName('clicked');
-        j.setStyle(Jewel.style.default());
-      });
-      
-      if (Jewels.last) {
-        var last = $(Jewels.last);
-        element.swapIfAdjacent(last);
-        Jewels.last = null;
-      } else {        
-        element.setClicked();
-        Jewels.last = element;
-      }
-    } catch(err) {
-      alert(err);
-    }
-  },
-  
-  explode: Explode.single,
-  
-  color: function(element) {
-    element = $(element);
-    var color;
-    color = element.getStyle("background-color");
-    return color;
-  },
-  
-  setClicked: function(element) {
-    $$('.clicked').each(function(e) {
-      e.removeClassName("clicked").setStyle(Jewel.style.default());
-      Jewels.last = null;
-    });
-    element = $(element);
-    element.addClassName("clicked").setStyle(Jewel.style.clicked());
-  },
-  
-  setColor: function(element, color) {
-    element = $(element);
-    element.setStyle({
-      "background": color
-    })
-  },
-  
-  setColorRandom: function(element) {    
-    var color = Colors.generate();
-    element.setColor(color);
-    Jewels.checkAllForMatches();
-  },
-  
-  move: function(element, direction) {
-    element = $(element);
-    var column = element.column();
-    var row = element.row();
-    
-    if (direction == "up") {
-      row--;
-    }
-    if (direction == "down") {
-      row++;
-    }
-    if (direction == "left") {
-      column--;
-    }
-    if (direction == "right") {
-      column++;
-    }
-    var next = Jewel.find(column, row);
-    element.swap(next);
-  },
-  
-  swap: function(element, last) {
-    element = $(element);
-    last = $(last);
-    
-    var current_color = element.color();
-    var last_color = last.color();
-    
-    last.setColor(current_color);
-    element.setColor(last_color); 
-  },
-  
-  swapIfAdjacent: function(element, last) {
-    if (element.adjacent(last)) {
-      element.swap(last);
-      if (Jewels.checkAllForMatches().any()) {
-      } else {
-        last.swap(element);
-      }
-    } 
-  },
-  
-  adjacent: function(element, last) {
-    element = $(element);
-    
-    row_distance = Math.abs(element.row() - last.row());
-    col_distance = Math.abs(element.column() - last.column());
-    
-    var same_row = row_distance === 1;
-    var same_col = col_distance === 1;
-    
-    return (same_row ? !same_col : same_col);
-  },
-  
-  pattern_l: function(element) {
-    element = $(element);
-    
-    return Pattern.l(element);
-    
-    return result;
-  },
-  
-  row: function(element) {
-    element = $(element);
-    try {
-      var top = element.getStyle("top");
-      top = pixels(top);
-      var row = top / Jewel.height;
-    } catch(e) {
-      alert(e);
-    }
-    
-    return row+1;
-  },
-  
-  column: function(element) {
-    element = $(element);
-    try {
-      var left = element.getStyle("left");
-      left = pixels(left);
-      var column = left / Jewel.width;
-    } catch(e) {
-      alert("column: " + e);
-    }
-    
-    return column+1;
-  },
-  
-  setTop: function(element, height) {
-    element = $(element);
-    element.setStyle({
-      "top": (height) + "px"      
-    });
-  },
-  
-  setLeft: function(element, height) {
-    element = $(element);
-    element.setStyle({
-      "left": (height) + "px"      
-    });
-  },
-  
-  setRow: function(element, row) {
-    element = $(element);
-
-    var start = 0;
-    var end = Jewel.height * (row-1);
-    
-    element.setTop(end);
-    element.clearRowClasses();
-    element.addClassName("r" + row);
-  },
-  
-  setColumn: function(element, col) {
-    element = $(element);
-    element.setLeft(Jewel.width * (col-1));
-    element.clearColumnClasses();
-    element.addClassName("c" + col);
-  },
-  
-  clearRowClasses: function(element) {
-    for (i=1; i <= Jewels.rows; i++) {
-      element.removeClassName("r" + i);
-    }
-  },
-  
-  clearColumnClasses: function(element) {
-    for (i=1; i <= Jewels.columns; i++) {
-      element.removeClassName("c" + i);
-    }
-  }
-});
-
 var Score = {
   score: 0,
   
@@ -891,7 +706,6 @@ var Jewel = {
     }
     var jewel = Jewel.new(column, 1);
     $('main').insert(jewel);
-    // jewel.highlight();
   },
   
   style: {
@@ -908,9 +722,188 @@ var Jewel = {
         "width": new String(Jewel.width-6) + "px"
       };
     }
+  },
+  
+  InstanceMethods: {
+    click: function(element) {
+      try {
+        $$('.jewel').each(function(j) {
+          j.removeClassName('clicked');
+          j.setStyle(Jewel.style.default());
+        });
+      
+        if (Jewels.last) {
+          var last = $(Jewels.last);
+          element.swapIfAdjacent(last);
+          Jewels.last = null;
+        } else {        
+          element.setClicked();
+          Jewels.last = element;
+        }
+      } catch(err) {
+        alert(err);
+      }
+    },
+  
+    explode: Explode.single,
+  
+    color: function(element) {
+      element = $(element);
+      var color;
+      color = element.getStyle("background-color");
+      return color;
+    },
+  
+    setClicked: function(element) {
+      $$('.clicked').each(function(e) {
+        e.removeClassName("clicked").setStyle(Jewel.style.default());
+        Jewels.last = null;
+      });
+      element = $(element);
+      element.addClassName("clicked").setStyle(Jewel.style.clicked());
+    },
+  
+    setColor: function(element, color) {
+      element = $(element);
+      element.setStyle({
+        "background": color
+      })
+    },
+  
+    setColorRandom: function(element) {    
+      var color = Colors.generate();
+      element.setColor(color);
+      Jewels.checkAllForMatches();
+    },
+  
+    move: function(element, direction) {
+      element = $(element);
+      var column = element.column();
+      var row = element.row();
+    
+      if (direction == "up") {
+        row--;
+      }
+      if (direction == "down") {
+        row++;
+      }
+      if (direction == "left") {
+        column--;
+      }
+      if (direction == "right") {
+        column++;
+      }
+      var next = Jewel.find(column, row);
+      element.swap(next);
+    },
+  
+    swap: function(element, last) {
+      element = $(element);
+      last = $(last);
+    
+      var current_color = element.color();
+      var last_color = last.color();
+    
+      last.setColor(current_color);
+      element.setColor(last_color); 
+    },
+  
+    swapIfAdjacent: function(element, last) {
+      if (element.adjacent(last)) {
+        element.swap(last);
+        if (Jewels.checkAllForMatches().any()) {
+        } else {
+          last.swap(element);
+        }
+      } 
+    },
+  
+    adjacent: function(element, last) {
+      element = $(element);
+    
+      row_distance = Math.abs(element.row() - last.row());
+      col_distance = Math.abs(element.column() - last.column());
+    
+      var same_row = row_distance === 1;
+      var same_col = col_distance === 1;
+    
+      return (same_row ? !same_col : same_col);
+    },
+  
+    row: function(element) {
+      element = $(element);
+      try {
+        var top = element.getStyle("top");
+        top = pixels(top);
+        var row = top / Jewel.height;
+      } catch(e) {
+        alert(e);
+      }
+    
+      return row+1;
+    },
+  
+    column: function(element) {
+      element = $(element);
+      try {
+        var left = element.getStyle("left");
+        left = pixels(left);
+        var column = left / Jewel.width;
+      } catch(e) {
+        alert("column: " + e);
+      }
+    
+      return column+1;
+    },
+  
+    setTop: function(element, height) {
+      element = $(element);
+      element.setStyle({
+        "top": (height) + "px"      
+      });
+    },
+  
+    setLeft: function(element, height) {
+      element = $(element);
+      element.setStyle({
+        "left": (height) + "px"      
+      });
+    },
+  
+    setRow: function(element, row) {
+      element = $(element);
+
+      var start = 0;
+      var end = Jewel.height * (row-1);
+    
+      element.setTop(end);
+      element.clearRowClasses();
+      element.addClassName("r" + row);
+    },
+  
+    setColumn: function(element, col) {
+      element = $(element);
+      element.setLeft(Jewel.width * (col-1));
+      element.clearColumnClasses();
+      element.addClassName("c" + col);
+    },
+  
+    clearRowClasses: function(element) {
+      for (i=1; i <= Jewels.rows; i++) {
+        element.removeClassName("r" + i);
+      }
+    },
+  
+    clearColumnClasses: function(element) {
+      for (i=1; i <= Jewels.columns; i++) {
+        element.removeClassName("c" + i);
+      }
+    }    
   }
 };
 
+
+Element.addMethods(Jewel.InstanceMethods);
   
 document.observe("dom:loaded", Jewels.init);
 
