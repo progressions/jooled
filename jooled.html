@@ -25,30 +25,35 @@ var Remove = {
   all: function(color) {
     $$('.jewel').each(function(j) {
       if (j.color() == color) {
-        j.remove();
+        Jewel.remove(j);
       }
     });
+    alert("done");
     Jewels.settle();
   }
 };
 
 var Explode = {
   single: function(element) {
-    element = $(element);
-    var row = element.row();
-    var column = element.column();
+    // alert("exploding");
+    if (element.parentNode !== null) {
+      element = $(element);
+      var row = element.row();
+      var column = element.column();
     
-    var elements = [];
+      var elements = [];
     
-    for (x=-1; x <= 1; x++) {
-      for (y=-1; y <= 1; y++) {
-        var jewel = Jewel.find(column+x, row+y);
-        if (jewel) {
-          jewel.remove();
+      for (x=-1; x <= 1; x++) {
+        for (y=-1; y <= 1; y++) {
+          // alert("x: " + x + ", y: " + y);
+          var jewel = Jewel.find(column+x, row+y);
+          if (jewel && jewel.parentNode !== null) {
+            jewel.remove();
+          }
         }
       }
+      setTimeout("Jewels.settle();", 500);
     }
-    setTimeout("Jewels.settle();", 500);
   }
 };
 
@@ -97,7 +102,7 @@ var Pattern = {
     elements.push(Pattern.Match.down(element));
     elements.push(Pattern.Match.left(element));
     elements.push(Pattern.Match.right(element));
-    elements.flatten();
+    // elements.flatten();
     return elements;
   },
   
@@ -117,6 +122,115 @@ var Pattern = {
       elements.first().setClicked();
     }
   },
+
+
+  
+  Match: {
+    all: function() {
+      var elements = [];
+      $$('.jewel').each(function(jewel) {
+        var result = Pattern.five(jewel);
+        elements.push(result);
+      });
+      // elements = elements.flatten();
+      elements = elements.uniq();
+      // alert("elements are: " + elements.inspect());
+      return elements;
+    },
+  
+    up: function(element) {
+      return this.pattern(element, "up");
+    },
+  
+    down: function(element) {
+      return this.pattern(element, "down");
+    },
+  
+    left: function(element) {
+      return this.pattern(element, "left");
+    },
+  
+    right: function(element) {
+      return this.pattern(element, "right");
+    },
+  
+    pattern: function(element, pointing) {
+      var x_direction = 0;
+      var y_direction = 0;
+    
+      if (pointing == "up") {
+        y_direction = -1;
+      }
+      if (pointing == "down") {
+        y_direction = 1;
+      }
+      if (pointing == "left") {
+        x_direction = -1;
+      }
+      if (pointing == "right") {
+        x_direction = 1;
+      }
+      
+      element = $(element);
+      
+      var elements = [];
+    
+      var color = element.color();
+      var col = element.column();
+      var row = element.row();
+    
+      var x,y;
+      x = col + (1 * x_direction);
+      y = row + (1 * y_direction);
+      
+      var first = Jewel.find(x,y);
+      
+      // two in a row
+      if (first && first.color() == color) {
+        if (pointing == "up" || pointing == "down") {
+          y = row + (2 * y_direction);
+        }
+        if (pointing == "left" || pointing == "right") {
+          x = col + (2 * x_direction);
+        }
+        var second = Jewel.find(x,y);
+      
+        // three in a row
+        if (second && second.color() == color) {
+          elements.push(element);
+          elements.push(first);
+          elements.push(second);
+          
+          if (pointing == "up" || pointing == "down") {
+            y = row + (3 * y_direction);
+          }
+          if (pointing == "left" || pointing == "right") {
+            x = col + (3 * x_direction);
+          }
+          var third = Jewel.find(x,y);
+          
+          // four in a row
+          if (third && third.color() == color) {
+            elements.push(third);
+            
+            if (pointing == "up" || pointing == "down") {
+              y = row + (4 * y_direction);
+            }
+            if (pointing == "left" || pointing == "right") {
+              x = col + (4 * x_direction);
+            }
+            var fourth = Jewel.find(x,y);
+
+            // five in a row
+            if (fourth && fourth.color() == color) {
+              elements.push(fourth);
+            }
+          }
+        }
+      }
+      return elements;
+    }
+  },  
   
   L: {
     all: function() {
@@ -333,113 +447,6 @@ var Pattern = {
         }  
       }    
     }
-  },
-  
-  Match: {
-    all: function() {
-      var elements = [];
-      $$('.jewel').each(function(jewel) {
-        var result = Pattern.five(jewel);
-        elements.push(result);
-      });
-      elements = elements.flatten();
-      elements = elements.uniq();
-      // alert("elements are: " + elements.inspect());
-      return elements;
-    },
-  
-    up: function(element) {
-      return this.pattern(element, "up");
-    },
-  
-    down: function(element) {
-      return this.pattern(element, "down");
-    },
-  
-    left: function(element) {
-      return this.pattern(element, "left");
-    },
-  
-    right: function(element) {
-      return this.pattern(element, "right");
-    },
-  
-    pattern: function(element, pointing) {
-      var x_direction = 0;
-      var y_direction = 0;
-    
-      if (pointing == "up") {
-        y_direction = -1;
-      }
-      if (pointing == "down") {
-        y_direction = 1;
-      }
-      if (pointing == "left") {
-        x_direction = -1;
-      }
-      if (pointing == "right") {
-        x_direction = 1;
-      }
-      
-      element = $(element);
-      
-      var elements = [];
-    
-      var color = element.color();
-      var col = element.column();
-      var row = element.row();
-    
-      var x,y;
-      x = col + (1 * x_direction);
-      y = row + (1 * y_direction);
-      
-      var first = Jewel.find(x,y);
-      
-      // two in a row
-      if (first && first.color() == color) {
-        if (pointing == "up" || pointing == "down") {
-          y = row + (2 * y_direction);
-        }
-        if (pointing == "left" || pointing == "right") {
-          x = col + (2 * x_direction);
-        }
-        var second = Jewel.find(x,y);
-      
-        // three in a row
-        if (second && second.color() == color) {
-          elements.push(element);
-          elements.push(first);
-          elements.push(second);
-          
-          if (pointing == "up" || pointing == "down") {
-            y = row + (3 * y_direction);
-          }
-          if (pointing == "left" || pointing == "right") {
-            x = col + (3 * x_direction);
-          }
-          var third = Jewel.find(x,y);
-          
-          // four in a row
-          if (third && third.color() == color) {
-            elements.push(third);
-            
-            if (pointing == "up" || pointing == "down") {
-              y = row + (4 * y_direction);
-            }
-            if (pointing == "left" || pointing == "right") {
-              x = col + (4 * x_direction);
-            }
-            var fourth = Jewel.find(x,y);
-
-            // five in a row
-            if (fourth && fourth.color() == color) {
-              elements.push(fourth);
-            }
-          }
-        }
-      }
-      return elements;
-    }
   }
 };
 
@@ -539,7 +546,7 @@ var Colors = {
       color = this.fresh.splice(rand-1, 1);
       return color;
     } catch(err) {
-      alert(err);
+      alert("generateFromFresh: " + err);
     }    
   },
   
@@ -560,7 +567,7 @@ var Colors = {
       color = this.colors[rand2];
       return color;
     } catch(err) {
-      alert(err);
+      alert("random: " + err);
     }    
   },
 
@@ -576,6 +583,29 @@ var Jewels = {
   rows: 8,
   columns: 8,
   
+  redraw: function() {
+    try {
+      Jewels.each(function(c, r) {
+        var j = Jewel.find(c, r);
+        
+        var column = j.column();
+        var row = j.row();
+        var color = j.color();
+        var klasses = j.classNames();
+      
+        j.remove();
+      
+        var jewel = Jewel.new(column, row, color);
+        klasses.each(function(k) {
+          jewel.addClassName(k);
+        });
+        $('main').insert(jewel);
+      });
+    } catch(zomg) {
+      // alert(zomg);
+    }
+  },
+  
   init: function() {
     try {
       Colors.init();
@@ -584,7 +614,7 @@ var Jewels = {
       
       Jewels.checkAllForMatches();
     } catch(z) {
-      alert(z);
+      alert("init: " + z);
     }
   },
   
@@ -627,16 +657,39 @@ var Jewels = {
       }
     });
     this.checkAllForMatches();
+    Jewels.redraw();
+  },
+  
+  present: function(jewels) {
+    var result = true;
+    jewels.each(function(j) {
+      result = result && (j.parentNode !== null);
+    });
+    
+    return result;
   },
   
   checkAllForMatches: function() {
     var results = Pattern.match();
 
-    if (results.any()) {
-      results.each(function(j) {
-        Score.add(10);
-        Colors.decrement(j.color());
-        j.remove();
+    if (results.flatten().any()) {
+      results.each(function(jewels) {
+        jewels.each(function(matches) {
+          if (matches.size() == 5) {
+            Zap.match(matches);
+            // alert("zap");
+          }
+          if (matches.size() == 4) {
+            Boom.match(matches);
+            // alert("boom");
+          }
+          if (matches.size() >= 3) {
+            matches.each(function(j) {
+              Jewel.remove(j);
+            });
+            // alert("three");
+          }
+        });
       });
       setTimeout("Jewels.settle();", 500);
     }
@@ -646,27 +699,144 @@ var Jewels = {
   }
 };
 
+var Boom = {
+  match: function(matches) {
+    if (Jewels.present(matches)) {
+      var first = matches.pop();
+      var c = first.column();
+      var r = first.row();
+      var color = first.color();
+    
+      matches.each(function(j) {
+        Jewel.remove(j);
+      });
+
+      Boom.new(c, r, color);
+    }
+  },
+  
+  fake: function() {
+    try {
+      var j = Jewel.find(3, 3);
+      j.remove();
+      
+      Boom.new(3, 3);
+    } catch(e) {
+      alert("fake: " + e);
+    }
+  },
+  
+  new: function(column, row, color) {
+    try {
+      var jewel = Jewel.boom(color);
+    
+      jewel.setColumn(column);
+      jewel.setRow(row);
+    
+      $('main').insert(jewel);
+    } catch(e) {
+      alert("newBoom: " + e);
+    }
+  }
+};
+
+var Zap = {
+  match: function(matches) {
+    if (Jewels.present(matches)) {
+      var first = matches.pop();
+      var c = first.column();
+      var r = first.row();
+    
+      matches.each(function(j) {
+        Jewel.remove(j);
+      });
+  
+      if (first.parentNode !== null) {
+        first.remove();
+      }
+      Zap.new(first.column(), first.row());
+    }
+  },
+  
+  fake: function() {
+    try {
+      var j = Jewel.find(3, 3);
+      j.remove();
+      
+      Zap.new(3, 3);
+    } catch(e) {
+      alert("fake: " + e);
+    }
+  },
+  
+  new: function(column, row) {
+    var jewel = Jewel.zap();
+    
+    jewel.setColumn(column);
+    jewel.setRow(row);
+    
+    $('main').insert(jewel);
+  }
+};
+
 var Jewel = {
   height: 50,
   width: 50,
   
   new: function(column, row, color) {
-    color = color || Colors.generate();
+    var jewel = Jewel.create(color);
+    
+    jewel.setColumn(column);
+    jewel.setRow(row);
+    
+    return jewel;
+  },
+  
+  blank: function() {
     var jewel = new Element('div', {
       "class": "jewel"
     });
     jewel.setStyle(Jewel.style.default());
-    jewel.setStyle({
-      "background": color
-    });
-    
-    Colors.increment(color);
-    
-    jewel.setColumn(column);
-    jewel.setRow(row);
     jewel.onclick = jewel.click;
     
+    return jewel;    
+  },
+  
+  create: function(color) {
+    var jewel = Jewel.blank();
+    
+    color = color || Colors.generate();
+    jewel.setColor(color);
+    Colors.increment(color);
+    return jewel;    
+  },
+  
+  boom: function(color) {
+    var jewel = Jewel.create(color);
+    jewel.addClassName("boom");
+    
     return jewel;
+  },
+  
+  zap: function() {
+    var jewel = Jewel.blank();
+    jewel.addClassName("zap");
+    
+    return jewel;
+  },
+  
+  remove: function(jewel) {
+    if (jewel.parentNode === null) {
+      // alert("parentNode is null: " + jewel.inspect());
+    } else {      
+      Score.add(10);
+      
+      if (jewel.hasClassName("boom")) {
+        // alert("destroying a boom");
+        jewel.explode();
+      }
+      jewel.remove();
+    }
   },
   
   find: function(column, row) {
@@ -714,20 +884,42 @@ var Jewel = {
     click: function(element) {
       try {
         $$('.jewel').each(function(j) {
-          j.removeClassName('clicked');
-          j.setStyle(Jewel.style.default());
+          if (j.parentNode !== null) {
+            j.removeClassName('clicked');
+            j.setStyle(Jewel.style.default());
+          }
         });
+      } catch(a) {
+        alert("a: " + a);
+      }
       
+      try {
         if (Jewels.last) {
-          var last = $(Jewels.last);
-          element.swapIfAdjacent(last);
-          Jewels.last = null;
-        } else {        
-          element.setClicked();
-          Jewels.last = element;
+          try {
+            var last = $(Jewels.last);
+            if (element.parentNode !== null && last.parentNode !== null) {
+              try {
+                element.swapIfAdjacent(last);
+              } catch(d) {
+                alert("d: " + d);
+              }
+              Jewels.last = null;
+            } else {
+              alert("something was null");
+            }
+          } catch(b) {
+            alert("b: " + b);
+          }
+        } else {
+          try {
+            element.setClicked();
+            Jewels.last = element;
+          } catch(c) {
+            alert("c: " + c);
+          }
         }
       } catch(err) {
-        alert(err);
+        alert("click: " + err);
       }
     },
   
@@ -736,7 +928,12 @@ var Jewel = {
     color: function(element) {
       element = $(element);
       var color;
-      color = element.getStyle("background-color");
+      Colors.colors.each(function(c) {
+        if(element.hasClassName(c)) {
+          color = c;
+        }
+      });
+      
       return color;
     },
   
@@ -751,9 +948,10 @@ var Jewel = {
   
     setColor: function(element, color) {
       element = $(element);
-      element.setStyle({
-        "background": color
-      })
+      Colors.colors.each(function(c) {
+        element.removeClassName(c);
+      });
+      element.addClassName(color);
     },
   
     setColorRandom: function(element) {    
@@ -791,17 +989,54 @@ var Jewel = {
       var last_color = last.color();
     
       last.setColor(current_color);
-      element.setColor(last_color); 
+      element.setColor(last_color);
+      
+      element.swapSpecialClass(last);
+    },
+    
+    swapSpecialClass: function(element, last) {
+      element = $(element);
+      last = $(last);
+      
+      ["boom", "zap"].each(function(c) {
+        if (element.hasClassName(c)) {
+          element.removeClassName(c);
+          last.addClassName(c);
+        }
+      });
     },
   
     swapIfAdjacent: function(element, last) {
-      if (element.adjacent(last)) {
-        element.swap(last);
-        if (Jewels.checkAllForMatches().any()) {
-        } else {
-          last.swap(element);
+      try {
+        element = $(element);
+        last = $(last);
+      
+        if (element.adjacent(last)) {
+          if (element.isZap()) {
+            Jewel.remove(element);
+            Remove.all(last.color());
+          } else if (last.isZap()) {
+            Jewel.remove(last);
+            Remove.all(element.color());
+          } else {
+            element.swap(last);
+            if (Jewels.checkAllForMatches().flatten().any()) {
+            } else {
+              last.swap(element);
+            }
+          }
         }
-      } 
+      } catch(e) {
+        // alert("swapIfAdjacent: " + e);
+      }
+    },
+    
+    isZap: function(element) {
+      return (element.hasClassName("zap"));
+    },
+    
+    isBoom: function(element) {
+      return (element.hasClassName("boom"));
     },
   
     adjacent: function(element, last) {
@@ -823,7 +1058,7 @@ var Jewel = {
         top = pixels(top);
         var row = top / Jewel.height;
       } catch(e) {
-        alert(e);
+        alert("row: " + e);
       }
     
       return row+1;
@@ -888,6 +1123,7 @@ var Jewel = {
   }
 };
 
+
 Element.addMethods(Jewel.InstanceMethods);
   
 document.observe("dom:loaded", Jewels.init);
@@ -920,6 +1156,49 @@ document.observe("dom:loaded", Jewels.init);
   position: absolute;
 }
 
+.red {
+  background-color: red;
+}
+.blue {
+  background-color: blue;
+}
+.purple {
+  background-color: purple;
+}
+.orange {
+  background-color: orange;
+}
+.yellow {
+  background-color: yellow;
+}
+.green {
+  background-color: green;
+}
+
+.red.boom {
+  background-color: #f4295e;
+}
+.blue.boom {
+  background-color: #5f69ca;
+}
+.purple.boom {
+  background-color: #9356b6;
+}
+.orange.boom {
+  background-color: #f5a628;
+}
+.yellow.boom {
+  background-color: #f4ee42;
+}
+.green.boom {
+  background-color: #53f442;
+}
+
+.zap {
+  background-color: #e9f2f1;
+}
+
+
 .clicked {
   border: 3px solid magenta;
 }
@@ -935,6 +1214,10 @@ document.observe("dom:loaded", Jewels.init);
 
 <p>Score: <span id="score"></span></p>
 <p><a href="#" onclick="Pattern.hint(); return false;">Hint</a></p>
+<p><a href="#" onclick="Jewels.redraw(); return false;">Redraw</a></p>
+<p><a href="#" onclick="Zap.fake(); return false;">Make zap</a></p>
+<p><a href="#" onclick="Boom.fake(); return false;">Make boom</a></p>
+
   <div style="display:none;">
     <p><a href="#" onclick="Remove.all('red'); return false;">Remove all red</a></p>
     <p><a href="#" onclick="Remove.all('blue'); return false;">Remove all blue</a></p>
