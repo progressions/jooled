@@ -63,7 +63,9 @@ var Pattern = {
   },
   
   all: function(highlight) {
+    Jewels.settle();
     Pattern.highlight_on = highlight;
+    alert("checking for moves");
     
     var result = false;
     $$('.jewel').each(function(jewel) {
@@ -464,7 +466,7 @@ var Score = {
 };
 
 var Colors = {
-  colors: ["red", "blue", "yellow", "purple", "orange", "green"],
+  colors: ["red", "blue", "yellow", "purple", "orange", "green", "white"],
   
   count: {},
   last: null,
@@ -658,6 +660,7 @@ var Jewels = {
     });
     this.checkAllForMatches();
     Jewels.redraw();
+    // Pattern.all();
   },
   
   present: function(jewels) {
@@ -694,7 +697,7 @@ var Jewels = {
       setTimeout("Jewels.settle();", 500);
     }
     
-    Pattern.all();
+    // Pattern.all();
     return results;
   }
 };
@@ -735,7 +738,7 @@ var Boom = {
     
       $('main').insert(jewel);
     } catch(e) {
-      alert("newBoom: " + e);
+      alert("Boom.new: " + e);
     }
   }
 };
@@ -783,6 +786,12 @@ var Jewel = {
   height: 50,
   width: 50,
   
+  insert: function(column, row, color) {
+    var jewel = Jewel.new(column, row, color);
+    
+    $('main').insert(jewel);
+  },
+  
   new: function(column, row, color) {
     var jewel = Jewel.create(color);
     
@@ -829,7 +838,7 @@ var Jewel = {
     if (jewel.parentNode === null) {
       // alert("parentNode is null: " + jewel.inspect());
     } else {      
-      Score.add(10);
+      Score.add(5);
       
       if (jewel.hasClassName("boom")) {
         // alert("destroying a boom");
@@ -874,8 +883,8 @@ var Jewel = {
     
     clicked: function() {
       return {
-        "height": new String(Jewel.height-6) + "px",
-        "width": new String(Jewel.width-6) + "px"
+        // "height": new String(Jewel.height-6) + "px",
+        // "width": new String(Jewel.width-6) + "px"
       };
     }
   },
@@ -982,16 +991,25 @@ var Jewel = {
     },
   
     swap: function(element, last) {
-      element = $(element);
-      last = $(last);
-    
-      var current_color = element.color();
-      var last_color = last.color();
-    
-      last.setColor(current_color);
-      element.setColor(last_color);
+      try {
+        element = $(element);
+        last = $(last);
       
-      element.swapSpecialClass(last);
+        var element_column = element.column();
+        var element_row = element.row();
+        var last_column = last.column();
+        var last_row = last.row();
+        var current_color = element.color();
+        var last_color = last.color();
+      
+        element.setPosition(last_column, last_row);
+        last.setPosition(element_column, element_row);
+      
+        // Jewel.insert(element_column, element_row, last_color);
+        // Jewel.insert(last_column, last_row, current_color);
+      } catch(omg) {
+        alert(omg);
+      }
     },
     
     swapSpecialClass: function(element, last) {
@@ -1002,6 +1020,9 @@ var Jewel = {
         if (element.hasClassName(c)) {
           element.removeClassName(c);
           last.addClassName(c);
+        } else if (last.hasClassName(c)) {
+          last.removeClassName(c);
+          element.addClassName(c);
         }
       });
     },
@@ -1108,6 +1129,12 @@ var Jewel = {
       element.clearColumnClasses();
       element.addClassName("c" + col);
     },
+    
+    setPosition: function(element, col, row) {
+      element = $(element);
+      element.setColumn(col);
+      element.setRow(row);
+    },
   
     clearRowClasses: function(element) {
       for (i=1; i <= Jewels.rows; i++) {
@@ -1133,7 +1160,10 @@ document.observe("dom:loaded", Jewels.init);
 <style type="text/css">  
 
 #main {
-  border: 3px solid black;
+/*  background: transparent url(images/background.png) repeat-x repeat-y;*/
+  background-image: url(images/background.png);
+  background-repeat: repeat-x repeat-y;
+  border: 3px solid #ccc;
   position: absolute;
   top: 10px;
   left: 200px;
@@ -1154,53 +1184,58 @@ document.observe("dom:loaded", Jewels.init);
   cursor: pointer;
   display: inline-block;
   position: absolute;
+  
+  background-position: 0 -2px;
 }
 
 .red {
-  background-color: red;
+  background-image: url(images/jewels/red.png);
 }
 .blue {
-  background-color: blue;
+  background-image: url(images/jewels/blue.png);
 }
 .purple {
-  background-color: purple;
+  background-image: url(images/jewels/purple.png);
 }
 .orange {
-  background-color: orange;
+  background-image: url(images/jewels/orange.png);
 }
 .yellow {
-  background-color: yellow;
+  background-image: url(images/jewels/yellow.png);
 }
 .green {
-  background-color: green;
+  background-image: url(images/jewels/green.png);
+}
+.white {
+  background-image: url(images/jewels/white.png);
 }
 
 .red.boom {
-  background-color: #f4295e;
+  background-image: url(images/boom/red.png);
 }
 .blue.boom {
-  background-color: #5f69ca;
+  background-image: url(images/boom/blue.png);
 }
 .purple.boom {
-  background-color: #9356b6;
+  background-image: url(images/boom/purple.png);
 }
 .orange.boom {
-  background-color: #f5a628;
+  background-image: url(images/boom/orange.png);
 }
 .yellow.boom {
-  background-color: #f4ee42;
+  background-image: url(images/boom/yellow.png);
 }
 .green.boom {
-  background-color: #53f442;
+  background-image: url(images/boom/green.png);
 }
 
 .zap {
-  background-color: #e9f2f1;
+  background-image: url(images/boom/red.png);
 }
 
 
 .clicked {
-  border: 3px solid magenta;
+  background-color: yellow;
 }
 
 </style>
