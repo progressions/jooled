@@ -28,7 +28,7 @@ var Remove = {
         Jewel.remove(j);
       }
     });
-    alert("done");
+    // alert("done");
     Jewels.settle();
   }
 };
@@ -63,9 +63,8 @@ var Pattern = {
   },
   
   all: function(highlight) {
-    Jewels.settle();
     Pattern.highlight_on = highlight;
-    alert("checking for moves");
+    // alert("checking for moves");
     
     var result = false;
     $$('.jewel').each(function(jewel) {
@@ -660,7 +659,7 @@ var Jewels = {
     });
     this.checkAllForMatches();
     Jewels.redraw();
-    // Pattern.all();
+    Pattern.all();
   },
   
   present: function(jewels) {
@@ -914,7 +913,12 @@ var Jewel = {
               }
               Jewels.last = null;
             } else {
-              alert("something was null");
+              if (element.parentNode === null) {
+                alert("element was null: " + element.inspect()); 
+              }
+              if (last.parentNode === null) {
+                alert("last was null: " + last.inspect()); 
+              }
             }
           } catch(b) {
             alert("b: " + b);
