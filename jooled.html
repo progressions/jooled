@@ -52,7 +52,7 @@ var Explode = {
           }
         }
       }
-      setTimeout("Jewels.settle();", 500);
+      setTimeout("Jewels.settle();", 300);
     }
   }
 };
@@ -60,6 +60,7 @@ var Explode = {
 var Pattern = {
   hint: function() {
     this.all(true);
+    Score.subtract(75);
   },
   
   all: function(highlight) {
@@ -124,8 +125,6 @@ var Pattern = {
     }
   },
 
-
-  
   Match: {
     all: function() {
       var elements = [];
@@ -133,9 +132,7 @@ var Pattern = {
         var result = Pattern.five(jewel);
         elements.push(result);
       });
-      // elements = elements.flatten();
       elements = elements.uniq();
-      // alert("elements are: " + elements.inspect());
       return elements;
     },
   
@@ -454,14 +451,33 @@ var Pattern = {
 var Score = {
   score: 0,
   
+  init: function() {
+    this.score = 0;
+    this.update();
+  },
+  
   update: function() {
     $('score').update(this.score);
   },
   
   add: function(value) {
-    this.score = this.score + value;
+    this.set(this.score + value);
     this.update();
   },
+  
+  subtract: function(value) {
+    var new_score = this.score - value;
+    if (new_score < 0) {
+      new_score = 0;
+    }
+    this.set(new_score);
+    this.update();
+  },
+  
+  set: function(value) {
+    this.score = value;
+    this.update();
+  }
 };
 
 var Colors = {
@@ -579,44 +595,123 @@ var Colors = {
   }
 };
 
+var Matrix = {
+  init: function() {
+    var column = [];
+    var row = [];
+    this.matrix = [];
+    this.archives = [];
+    this.max_archives = 10;
+    
+    for (c = 0; c < Jewels.columns; c++) {
+      for (r = 0; r < Jewels.rows; r++) {
+        row.push(r);
+      }
+      this.matrix.push(row);
+      row = [];
+    }
+  },
+  
+  add: function(element, col, row) {
+    this.matrix[col-1][row-1] = element;
+  },
+  
+  get: function(col, row) {
+    col = col-1;
+    row = row-1;
+    var result = null;
+    if (col >= 0 && col < this.matrix.size() && row >= 0 && row < this.matrix[0].size()) {
+      result = this.matrix[col][row];
+    }
+    return result;
+  },
+  
+  remove: function(col, row) {
+    this.verify(col-1, row-1, function() {
+      Matrix.add(undefined, col, row);
+    });
+  },
+  
+  verify: function(col, row, callback) {
+    if (col >= 0 && col < this.matrix.size() && row >= 0 && row < this.matrix[0].size()) {
+      callback();
+    }    
+  },
+  
+  archive: function() {
+    var row = [];
+    var archive = [];
+    
+    for (c = 0; c < Jewels.columns; c++) {
+      for (r = 0; r < Jewels.rows; r++) {
+        row.push(this.matrix[c][r]);
+      }
+      archive.push(row);
+      row = [];
+    }
+    archive.push(Score.score);
+    
+    this.archives.push(archive);
+  },
+  
+  undo: function() {
+    try {
+      if (this.archives.size() > 1) {
+        Jewels.clearClicked();
+      
+        var column = [];
+        this.matrix = [];
+        
+        this.archives.pop();
+        archive = this.archives.pop();
+    
+        for (c = 0; c < Jewels.columns; c++) {
+          for (r = 0; r < Jewels.rows; r++) {
+            column.push(archive[c][r]);
+          }
+          this.matrix.push(column);
+          column = [];
+        }
+        Score.set(archive.last());
+        Matrix.archive();
+        Jewels.redraw();
+      } else {
+        alert("can't undo");
+      }
+    } catch(omg) {
+      alert("undo: " + omg);
+    }
+  }
+}
+
 var Jewels = {
   last: null,
   rows: 8,
   columns: 8,
   
-  redraw: function() {
-    try {
-      Jewels.each(function(c, r) {
-        var j = Jewel.find(c, r);
-        
-        var column = j.column();
-        var row = j.row();
-        var color = j.color();
-        var klasses = j.classNames();
-      
-        j.remove();
-      
-        var jewel = Jewel.new(column, row, color);
-        klasses.each(function(k) {
-          jewel.addClassName(k);
-        });
-        $('main').insert(jewel);
-      });
-    } catch(zomg) {
-      // alert(zomg);
-    }
-  },
-  
   init: function() {
     try {
+      $('main').hide();
+      $('main').update("");
+      
+      Matrix.init();
+      Score.init();
       Colors.init();
       Jewels.create();
-      Score.update();
       
-      Jewels.checkAllForMatches();
+      Jewels.initializing = true;
+      Jewels.checkAllForMatches(function() {
+        Jewels.initializing = false;
+        Score.init();
+        $('main').show();
+      });
     } catch(z) {
       alert("init: " + z);
     }
+  },
+  
+  initScore: function() {
+    Score.init();
   },
   
   create: function() {
@@ -637,8 +732,7 @@ var Jewels = {
     this.each(function(c, r) {
       var color = Colors.generate();
 
-      jewel = Jewel.new(c, r, color);
-      $('main').insert(jewel);
+      Jewel.insert(c, r, color);
     });
   },
   
@@ -658,8 +752,13 @@ var Jewels = {
       }
     });
     this.checkAllForMatches();
-    Jewels.redraw();
-    Pattern.all();
+  },
+    
+  clearClicked: function() {
+    $$('.clicked').each(function(e) {
+      e.removeClassName("clicked").setStyle(Jewel.style.default());
+      Jewels.last = null;
+    });
   },
   
   present: function(jewels) {
@@ -671,21 +770,25 @@ var Jewels = {
     return result;
   },
   
-  checkAllForMatches: function() {
+  checkAllForMatches: function(callback) {
+    if (callback) {
+      this.callback = callback;
+    }
     var results = Pattern.match();
 
     if (results.flatten().any()) {
       results.each(function(jewels) {
         jewels.each(function(matches) {
-          if (matches.size() == 5) {
-            Zap.match(matches);
-            // alert("zap");
-          }
-          if (matches.size() == 4) {
-            Boom.match(matches);
-            // alert("boom");
-          }
-          if (matches.size() >= 3) {
+          // if (matches.size() == 5) {
+          //   Zap.match(matches);
+          //   // alert("zap");
+          // }
+          // if (matches.size() == 4) {
+          //   Boom.match(matches);
+          //   // alert("boom");
+          // }
+          // if (matches.size() >= 3) {
+          if (matches.size() == 3) {
             matches.each(function(j) {
               Jewel.remove(j);
             });
@@ -693,11 +796,41 @@ var Jewels = {
           }
         });
       });
-      setTimeout("Jewels.settle();", 500);
+      
+      if (Jewels.initializing) {
+        // still in the initializing state so don't pause while settling
+        Jewels.settle();
+      } else {
+        // pause to show jewels being removed
+        setTimeout("Jewels.settle();", 300);
+      }
+    } else {
+      if (this.callback) {
+        this.callback();
+        this.callback = undefined;
+      }
+      Matrix.archive();
+      Pattern.all();
     }
-    
-    // Pattern.all();
     return results;
+  },
+  
+  redraw: function() {
+    try {
+      $('main').update("");
+ 
+      this.each(function(c, r) {
+        var j = Matrix.get(c, r);
+        
+        j.setColumn(c);
+        j.setRow(r);
+      
+        $('main').insert(j);
+      });
+      
+    } catch(zomg) {
+      alert("redraw: " + zomg);
+    }
   }
 };
 
@@ -731,10 +864,8 @@ var Boom = {
   new: function(column, row, color) {
     try {
       var jewel = Jewel.boom(color);
-    
-      jewel.setColumn(column);
-      jewel.setRow(row);
-    
+      
+      jewel.setPosition(column, row);
       $('main').insert(jewel);
     } catch(e) {
       alert("Boom.new: " + e);
@@ -774,8 +905,7 @@ var Zap = {
   new: function(column, row) {
     var jewel = Jewel.zap();
     
-    jewel.setColumn(column);
-    jewel.setRow(row);
+    jewel.setPosition(column, row);
     
     $('main').insert(jewel);
   }
@@ -788,14 +918,14 @@ var Jewel = {
   insert: function(column, row, color) {
     var jewel = Jewel.new(column, row, color);
     
+    Matrix.add(column, row, jewel);
     $('main').insert(jewel);
   },
   
   new: function(column, row, color) {
     var jewel = Jewel.create(color);
     
-    jewel.setColumn(column);
-    jewel.setRow(row);
+    jewel.setPosition(column, row);
     
     return jewel;
   },
@@ -843,12 +973,13 @@ var Jewel = {
         // alert("destroying a boom");
         jewel.explode();
       }
+      Matrix.remove(jewel.column(), jewel.row());
       jewel.remove();
     }
   },
   
   find: function(column, row) {
-    return $$('.c' + column + '.r' + row).first();
+    return Matrix.get(column, row);
   },
   
   findByColor: function(color) {
@@ -865,11 +996,10 @@ var Jewel = {
     if (row > 1) {
       for(z=row-1; z > 0; z--) {
         above = Jewel.find(column, z);
-        above.setRow(z+1);
+        above.setPosition(column, z+1);
       }
     }
-    var jewel = Jewel.new(column, 1);
-    $('main').insert(jewel);
+    Jewel.insert(column, 1);
   },
   
   style: {
@@ -951,10 +1081,7 @@ var Jewel = {
     },
   
     setClicked: function(element) {
-      $$('.clicked').each(function(e) {
-        e.removeClassName("clicked").setStyle(Jewel.style.default());
-        Jewels.last = null;
-      });
+      Jewels.clearClicked();
       element = $(element);
       element.addClassName("clicked").setStyle(Jewel.style.clicked());
     },
@@ -1008,11 +1135,8 @@ var Jewel = {
       
         element.setPosition(last_column, last_row);
         last.setPosition(element_column, element_row);
-      
-        // Jewel.insert(element_column, element_row, last_color);
-        // Jewel.insert(last_column, last_row, current_color);
       } catch(omg) {
-        alert(omg);
+        alert("swap: " + omg);
       }
     },
     
@@ -1123,19 +1247,18 @@ var Jewel = {
       var end = Jewel.height * (row-1);
     
       element.setTop(end);
-      element.clearRowClasses();
-      element.addClassName("r" + row);
     },
   
     setColumn: function(element, col) {
       element = $(element);
       element.setLeft(Jewel.width * (col-1));
-      element.clearColumnClasses();
-      element.addClassName("c" + col);
     },
     
     setPosition: function(element, col, row) {
       element = $(element);
+      
+      Matrix.add(element, col, row);
+      
       element.setColumn(col);
       element.setRow(row);
     },
@@ -1164,7 +1287,6 @@ document.observe("dom:loaded", Jewels.init);
 <style type="text/css">  
 
 #main {
-/*  background: transparent url(images/background.png) repeat-x repeat-y;*/
   background-image: url(images/background.png);
   background-repeat: repeat-x repeat-y;
   border: 3px solid #ccc;
@@ -1253,11 +1375,12 @@ document.observe("dom:loaded", Jewels.init);
 
 <p>Score: <span id="score"></span></p>
 <p><a href="#" onclick="Pattern.hint(); return false;">Hint</a></p>
-<p><a href="#" onclick="Jewels.redraw(); return false;">Redraw</a></p>
-<p><a href="#" onclick="Zap.fake(); return false;">Make zap</a></p>
-<p><a href="#" onclick="Boom.fake(); return false;">Make boom</a></p>
+<p><a href="#" onclick="Jewels.init(); return false;">NEW GAME</a></p>
+<p><a href="#" onclick="Matrix.undo(); return false;">Undo</a></p>
 
   <div style="display:none;">
+    <p><a href="#" onclick="Zap.fake(); return false;">Make zap</a></p>
+    <p><a href="#" onclick="Boom.fake(); return false;">Make boom</a></p>
     <p><a href="#" onclick="Remove.all('red'); return false;">Remove all red</a></p>
     <p><a href="#" onclick="Remove.all('blue'); return false;">Remove all blue</a></p>
     <p><a href="#" onclick="Remove.all('green'); return false;">Remove all green</a></p>
@@ -1272,6 +1395,9 @@ document.observe("dom:loaded", Jewels.init);
 <div id='main'>
 </div>  
   
+</div>
+
+<div id='log'>
 </div>
 
 </body>
